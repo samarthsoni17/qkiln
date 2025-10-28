@@ -1,6 +1,12 @@
-# kdb+ Architecture
+# qKiln – Architecture Sandbox
 
-This repo contains sample kdb+ architecture for building a kdb+ application for capturing real time streaming data. This repo accompanies the online training course on the [KX Academy](https://learninghub.kx.com/courses/kdb-architecture/). 
+This repository imports the architecture baseline from the KX Academy GitHub repository (original repo: https://github.com/KxSystems/kdb-architecture-course).  
+The content is imported for local experimentation and modification under the `architecture/` directory; original commit history is *not* merged (squashed) to keep this repo’s history clean.  
+Special thanks to Michaela Woods and the KX Academy team for creating and sharing the foundational architecture work.
+
+# Brief Introduction
+
+This repo contains sample **kdb+ architecture** for building a kdb+ application for capturing real time streaming data. This repo accompanies the online training course on the [KX Academy](https://learninghub.kx.com/courses/kdb-architecture/). 
 
 ## Prerequisites
 
