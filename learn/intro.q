@@ -84,6 +84,7 @@ h:{:{x+y}}[]      / Return a function
 // Higher order functions/ADVERBs
 /"over" -- In words, we tell q to start with the initial value of 0 in the accumulator and then modify + with the iterator / so that it adds across the list
 0 +/ 1 2 3 4 5
+"""use the function to iterate through the list, taking output of last step as input of current step"""
 0 +/ 1+til 100 /5050
 /we can use any operator or even our own function:
 5000 -/ 1+til 100 /-50
@@ -136,10 +137,11 @@ F0basecase,sum -2#F0basecase /append the sum of last 2 to the list
 {[xn] xn-((xn*xn)-2)%2*xn}1.5
 {[xn] xn-((xn*xn)-2)%2*xn}1.416667
 {[xn] xn-((xn*xn)-2)%2*xn}1.414216 /...so on
-/vv*** q4m3 defines: "Wouldn't it be nice of q had a higher-order function to apply a function recursively, starting at the base case, until the output converges" 
-{x,sum -2#x}/ [1 1] /starts spiralling because this keeps increasing
-
+/vv*** q4m3 defines: "Wouldn't it be nice of q had a higher-order function to apply a function recursively, starting at the base case, until the output
+/Just specify the base case without second argument and q iterates until the result converges within the system comparison tolerance (as of this writing – Sep 2015 – that tolerance is 10-14)"
 {[xn] xn-((xn*xn)-2)%2*xn}/ [1]
+
+{x,sum -2#x}/ [1 1] /dont run -- starts spiralling because this keeps increasing
 
 /to witness the convergence
 \P 0 
@@ -195,10 +197,14 @@ sums[sells] /2 6 9 11
 9&sums[buys] /2 3 7 9 9 9f
 11&sums[buys] /2 3 7 10 11 11f 
 /vv *** an iterator that applies a binary function and a given right operand to each item of a list on the left
-/ "each left" \: (slash swinging left)
-sums[sells] &\:sums[buys]
+/ "each left" \: (slash swinging left) --- treat left arguments as individual variables instead of a list
+sums[sells] &\:sums[buys] /A
+sums[buys] &\:sums[sells] /B
 / vertical successive differences
 deltas sums[sells] &\:sums[buys]
+/ "each right" /: (slash swinging right) --- treat right arguments as individual variables instead of a list
+sums[sells] &/:sums[buys] /same as B
+sums[buys] &/:sums[sells] /same as A
 
 /vv *** "each" applies a given function to each item of a list
 count (2 2 2 2;2 3 3)
@@ -248,7 +254,8 @@ update c3:10*c3 from t where c2=`a /scale the c3 column of t just in the positio
 `c2`c3 xdesc t
 / rng
 10?20
-10?1.0
+10?1.0 /0-1
+10?2.0 /0-2
 10?100.0
 100*(10?1.0)
 16?`hare`krishna`rama
