@@ -1,7 +1,7 @@
 / q tick/rte.q  -p 5013
 system"l tick/sym.q"
 
-h_tp:hopen 5010;
+h_tp:hopen 10810;
 
 latestSymPrice: `sym xkey 0#trade;   //we key by sym as we want to know this on a per sym basis
 

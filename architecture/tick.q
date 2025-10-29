@@ -19,16 +19,24 @@
 /2005.10.10 zero latency
 "kdb+tick 2.8 2014.03.12"
 
-/q tick.q SRC [DST] [-p 5010] [-o h]
+/q tick.q SRC [DST] [-p 10810] [-o h]
 system"l tick/",(src:first .z.x,enlist"sym"),".q"
 
-if[not system"p";system"p 5010"]
+if[not system"p";system"p 10810"]
 
 \l tick/u.q
 \d .u
 ld:{if[not type key L::`$(-10_string L),string x;.[L;();:;()]];i::j::-11!(-2;L);if[0<=type i;-2 (string L)," is a corrupt log. Truncate to length ",(string last i)," and restart";exit 1];hopen L};
 tick:{init[];if[not min(`time`sym~2#key flip value@)each t;'`timesym];@[;`sym;`g#]each t;d::.z.D;if[l::count y;L::`$":",y,"/",x,10#".";l::ld d]};
 
+/0. End of day is triggered
+/1. sends endofday message to all processes to let them know its past midnight (this below 2 lines)
+/2. Saves data to disk
+/3. Deletes data in rdb memory
+/4. Reload data in HDB process
+/5. Current date increments by 1 in .u.d
+/6. Safely closes connection to current tplog, generating new tplog file for new date+establish connection to the new file
+/7. Checks data validity also (if date is okay to save down or if there are older dates as well)
 endofday:{end d;d+:1;if[l;hclose l;l::0(`.u.ld;d)]};
 ts:{if[d<x;if[d<x-1;system"t 0";'"more than one day?"];endofday[]]};
 
@@ -43,6 +51,12 @@ if[not system"t";system"t 1000";
  upd:{[t;x]ts"d"$a:.z.P;
  if[not -16=type first first x;a:"n"$a;x:$[0>type first x;a,x;(enlist(count first x)#a),x]];
  f:key flip value t;pub[t;$[0>type first x;enlist f!x;flip f!x]];if[l;l enlist (`upd;t;x);i+:1];}];
+
+/upd can behave differently based on if a timer is set with it or not
+/ batch publishing mode ---OR--- real time publishing mode/tick mode
+/ batch mode --- data accumulates for X duration or until Y records -- delayed answer, releases data in batches
+/ tick mode --- instantly broadcasts data as soon as it comes --- immediate answer
+
 
 \d .
 .u.tick[src;.z.x 1];
@@ -62,7 +76,7 @@ if[not system"t";system"t 1000";
 >q tick/ssl.q
 
 /run
->q tick.q sym  .  -p 5010	/tick
->q tick/rdb.q :5010 -p 5011	/rdb
->q sym            -p 5012	/hdb
->q tick/ssl.q sym :5010		/feed
+>q tick.q sym  .  -p 10810	/tick
+>q tick/rdb.q :10810 -p 10811	/rdb
+>q sym            -p 10812	/hdb
+>q tick/ssl.q sym :10810		/feed

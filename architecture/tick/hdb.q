@@ -1,4 +1,4 @@
-/q tick/hdb.q sym -p 5012
+/q tick/hdb.q sym -p 10812
 if[1>count .z.x;show"Supply directory of historical database";exit 0];
 hdb:.z.x 0
 /Mount the Historical Date Partitioned Database
