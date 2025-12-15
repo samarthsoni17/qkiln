@@ -3,6 +3,7 @@ show "Hare Krishna"
 
 "c"$0x57656c6c20646f6e6521
 /"Well done!"
+`byte$"Well done!" /0x57656c6c20646f6e6521
 
 42
 show a:42
@@ -84,13 +85,31 @@ h:{:{x+y}}[]      / Return a function
 // Higher order functions/ADVERBs
 /"over" -- In words, we tell q to start with the initial value of 0 in the accumulator and then modify + with the iterator / so that it adds across the list
 0 +/ 1 2 3 4 5
-"""use the function to iterate through the list, taking output of last step as input of current step"""
+0 +\ 1 2 3 4 5
 0 +/ 1+til 100 /5050
 /we can use any operator or even our own function:
 5000 -/ 1+til 100 /-50
+0 -/ 1+til 100 /-5050 ==> 0 - 1 - 2 ....
+(-/) 1+til 100 /   *****   -5048 ==> 1 - 2 - 3 .... ==> hence difference of 2
 0 {x+y}/ 1 2 3 4 5
 0 {x+y}/ 1+til 100
 0 {x-y}/ 1+til 100
+1.1 {x+y}\ 1 2 3 4 /2.1 4.1 7.1 11.1
+{x+y}\ [1.1 1 2 3 4] /1.1 2.1 4.1 7.1 11.1
+({x+y}\) 1.1 1 2 3 4 /1.1 2.1 4.1 7.1 11.1
+/ LOL I spent 2 hours on the below thing damn confused because i was mentally applying BODMAS thinking 2*x only does double of x; but actually here we are multipling (x+y) with 2!!!
+1.1 {2*x+y}\ 1 2 3 4 /4.2 12.4 30.8 69.6 ===> huh????? - ans above
+{2*x+y}\ [3.2 1 2 3 4] /3.2 8.4 20.8 47.6 103.2 ===> (2*0+3.2 ; 2*3.2 + 2*1 ;   ) -- i was able to figure the above out only when i finally wrote each step by hand so i guess in debugging ones gotta do that more often
+{2*x+y}\ [1 3.2 2 3 4] /1 8.4 20.8 47.6 103.2 ===> huh????? - ans above
+0 {2*x+y}\ 1.1 1 2 3 4 /2.2 6.4 16.8 39.6 87.2 ===> huh????? - ans above
+1.1 {2*x-y}\ 1 2 3 4 /0.2 -3.6 -13.2 -34.4 ===> huh????? - ans above
+/ now corrected ones....
+1.1 {(2*x)+y}\ 1 2 3 4 /3.2 8.4 19.8 43.6
+{(2*x)+y}\ [3.2 1 2 3 4] /3.2 7.4 16.8 36.6 77.2 ==>   *****    because accumulator now starts with x=0
+{(2*x)+y}\ [1 3.2 2 3 4] /1 5.2 12.4 27.8 59.6 ==> because accumulator now starts with x=0
+0 {(2*x)+y}\ 1 3.2 2 3 4 /1 5.2 12.4 27.8 59.6 ==> same result hence proven
+0 {(2*x)+y}\ 1.1 1 2 3 4 /1.1 3.2 8.4 19.8 43.6
+1.1 {(2*x)-y}\  1 2 3 4 /expected: 1.2 2.8 3.2 4.8 (i thought last 3 accumulator will go in y) ACTUAL: 1.2 0.4 -2.2 -8.4 (accumulator always stays in x,    *****   NEW VALUE STARTS AT y)
 /no need to specify first value of accumulator
 (+/) 1 2 3 4 5
 (+/) 1+til 100
@@ -105,6 +124,7 @@ h:{:{x+y}}[]      / Return a function
 prd sum max min /just names given to the above 4 
 / raise a num X to an exponent n using: (*/) n#X
 (*/) 2#1.4142135623730949 /1.9999999999999996
+1.4142135623730949 xexp 2 / 1.9999999999999996 ==> works similarly (my observation)
 n:5
 (*/) n#10 /100000
 
@@ -126,22 +146,24 @@ F0basecase,sum -2#F0basecase /append the sum of last 2 to the list
 {x,sum -2#x}1 1
 {x,sum -2#x}1 1 2
 /^^ "apply function {..} on inp list 1 1 2"
-/vv "apply function {..} on inp list 1 1 2, 10 times"
+/vv "apply function {..} on inp list 1 1 2, 10 times"    *****   imp
 10 {x,sum -2#x}/ 1 1 2 /1 1 2 3 5 8 13 21 34 55 89 144 233
 10 {x,sum -2#x}/ (1;1;2) /same
 10 {x,sum -2#x}/ [(1;1;2)] /NOT SAME - tries to run recursively unti conversion, maybe due to the [..]
-/^^*** q4m3 defines: "Wouldn’t it be nice if q had a higher-order function that applies a recursive function a specified number of times, starting with the base case" 
+/^^   *****   q4m3 defines: "Wouldn’t it be nice if q had a higher-order function that applies a recursive function a specified number of times, starting with the base case"
 
 /newtons approximation to find zeroes
 {[xn] xn-((xn*xn)-2)%2*xn}1 /for 2, num=x^2 -2, den=2x=derivative of num
 {[xn] xn-((xn*xn)-2)%2*xn}1.5
 {[xn] xn-((xn*xn)-2)%2*xn}1.416667
 {[xn] xn-((xn*xn)-2)%2*xn}1.414216 /...so on
-/vv*** q4m3 defines: "Wouldn't it be nice of q had a higher-order function to apply a function recursively, starting at the base case, until the output
-/Just specify the base case without second argument and q iterates until the result converges within the system comparison tolerance (as of this writing – Sep 2015 – that tolerance is 10-14)"
-{[xn] xn-((xn*xn)-2)%2*xn}/ [1]
+/vv   *****   q4m3 defines: "Wouldn't it be nice of q had a higher-order function to apply a function recursively, starting at the base case, until the output converges"
+/ tolerance: 10^-14 as of sept 2015
+{x,sum -2#x}/ [1 1] /starts spiralling because this keeps increasing
+{x,sum -2#x}/ [10;1 1] /DOESNT SPIRAL, effectively same as the case before this
 
-{x,sum -2#x}/ [1 1] /dont run -- starts spiralling because this keeps increasing
+{[xn] xn-((xn*xn)-2)%2*xn}/ [1]
+{[xn] xn-((xn*xn)-2)%2*xn}/ 1 / doesnt work, for the convergence functionality i think we need [..] for arguments
 
 /to witness the convergence
 \P 0 
@@ -152,11 +174,12 @@ F0basecase,sum -2#F0basecase /append the sum of last 2 to the list
 {[c; xn] xn-((xn*xn)-c)%2*xn}
 {[c; xn] xn-((xn*xn)-c)%2*xn}[2.0;] /now a projection, just unary
 {[c; xn] xn-((xn*xn)-c)%2*xn}[2.0;]/ [1] /applied recursively on base case
-{[c; xn] xn-((xn*xn)-c)%2*xn}[3.0;]/ [1] /for 3
+{[c; xn] xn-((xn*xn)-c)%2*xn}[3.0;]/ [1] /for getting sqrt 3
 {[c; xn] xn-((xn*xn)-c)%2*xn}[3.0;]\ [1] /to see all steps
-3 {[c; xn] xn-((xn*xn)-c)%2*xn}[3.0;]\ 1 5 /to stop at 3rd step done twice with 2 different initial values (notice how we cannot use [..] aroud the input param
+3 {[c; xn] xn-((xn*xn)-c)%2*xn}[3.0;]\ 1 5 /to stop at 3rd step done twice with 2 different initial values (notice how we cannot use [..] aroud the input param 1 5 (Bad file descriptor))
 
 /more abstract, pth power in num, (p-1) power in den:
+/to get bigger roots that just sqrt
 num:((*/) p#xn)-c
 den:(p* (*/) (p-1)#xn)
 {[p; c; xn] xn-(((*/)p#xn)-c)%p*(*/)(p-1)#xn} /just removed spaces
@@ -167,7 +190,7 @@ den:(p* (*/) (p-1)#xn)
 
 
 
-/ vv *** q4m3 defines: "Wouldn't it be nice if q had a built-in function that returned the successive differences of a numeric list?"
+/ vv   *****   q4m3 defines: "Wouldn't it be nice if q had a built-in function that returned the successive differences of a numeric list?"
 deltas 1 2 3 4 5 /1 1 1 1 1
 deltas 10 15 20 /10 5 5
 deltas 2 2 2 2 / 2 0 0 0
@@ -196,15 +219,12 @@ sums[sells] /2 6 9 11
 6&sums[buys] /2 3 6 6 6 6f
 9&sums[buys] /2 3 7 9 9 9f
 11&sums[buys] /2 3 7 10 11 11f 
-/vv *** an iterator that applies a binary function and a given right operand to each item of a list on the left
-/ "each left" \: (slash swinging left) --- treat left arguments as individual variables instead of a list
-sums[sells] &\:sums[buys] /A
-sums[buys] &\:sums[sells] /B
+/vv   *****   an iterator that applies a binary function and a given right operand to each item of a list on the left (atomic on left, list/atom on right)
+/ "each left" {function}\: (slash swinging left)
+sums[sells] &\:sums[buys]
+/ "each right" {function}/: ==> applies a binary function and a given left operand to each item of a list on the right (atomic on right, list/atom on left)
 / vertical successive differences
 deltas sums[sells] &\:sums[buys]
-/ "each right" /: (slash swinging right) --- treat right arguments as individual variables instead of a list
-sums[sells] &/:sums[buys] /same as B
-sums[buys] &/:sums[sells] /same as A
 
 /vv *** "each" applies a given function to each item of a list
 count (2 2 2 2;2 3 3)
@@ -254,14 +274,14 @@ update c3:10*c3 from t where c2=`a /scale the c3 column of t just in the positio
 `c2`c3 xdesc t
 / rng
 10?20
-10?1.0 /0-1
-10?2.0 /0-2
+10?1.0
 10?100.0
 100*(10?1.0)
 16?`hare`krishna`rama
 16?`hare`krishna`hare`rama
 10*1+1000000?1000 /1 add to ensure no 0s
 10*1000000?1000
+2?10f
 
 1000000?1.0
 90.0+(1000000?2001)%100 /random 90.0-110.0 values
@@ -301,3 +321,14 @@ mins pxs
 pxs
 pxs-mins pxs
 max pxs-mns pxs
+
+/ Q. generate the fibonacci sequence in kdb upto a given number which users can then pass in (some of my failed trials)
+ (+\) 1 1
+(+/) (((+/) 1 1); (+\) 1)
+(+/) (( (+/) (((+/) 1 1); (+\) 1) );((+/) 1 1))
+1 +/ 1 2
+(+/) 1 1 2
+(+/) 1 1 2
+
+t[0]
+
