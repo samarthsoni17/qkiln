@@ -1,0 +1,9 @@
+Java regex for <something> <something>#:
+.* .*#
+    Breakdown:
+    .* → any characters (greedy) for first "something"
+    → literal space
+    .* → any characters for second "something"
+    # → literal #
+
+

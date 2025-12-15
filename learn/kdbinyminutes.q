@@ -178,6 +178,11 @@ a / => "bye"
 $[1=0;a:"hi";0=1;a:"bye";a:"hello again"]
 a / => "hello again"
 
+/vector‐conditional ?[x;y;z]
+/used when you have vector (list) inputs:
+/	•	x is a boolean vector,
+/	•	y and z are vectors of the same type (or atoms broadcasted), and
+/	•	it returns a new vector where for each position, if x[i] is true then y[i] else z[i]
 
 ////////////////////////////////////
 ////      Data Structures       ////
@@ -291,12 +296,77 @@ l:1+til 9 / til is a useful shortcut for generating ranges
 -5#l / => 5 6 7 8 9
 / drop the last 5
 -5_l / => 1 2 3 4
-/ find the first occurrence of 4
+/ find the first occurrence of 4   *****   NOTICE that the left operator is found in the right list not vice versa
 l?4 / => 3
 l[3] / => 4
 l[l?4] / redundant, => 4
 /   *****   can specify all indexes to extract from list
 l[2 5 2 2 3] / => 3 6 3 3 4
+/ some more examples
+l3:6#.Q.a /"abcdef"
+l3,:l3
+3?l3 /taking out randomly 3 elements
+"b"?l3 /taking out randomly 98 elements
+(enlist "b")?l3 /finding l3 in b
+/   *****   when supplied two lists, '?' finds the second list element by element in the first (i.e. it is atomic in the left operator)
+l3 /"abcdefabcdef"
+"abd"?l3 /    *****   missing elements go to nth index where n=count ==> 0 1 3 2 3 3 0 1 3 2 3 3
+"abg"?l3 / 0 1 3 3 3 3 0 1 3 3 3 3
+"dcf"?l3 / 3 3 1 0 3 2 3 3 1 0 3 2
+"dcf"?"ab" / 3 3
+"dcf"?"a" / 3
+"ag"?l3 / 0 2 2 2 2 2 0 2 2 2 2 2
+"abcdef"?l3 / 0 1 2 3 4 5 0 1 2 3 4 5
+"abcde"?l3 / here the '5' is due to nth index not due to f's position ==> 0 1 2 3 4 5 0 1 2 3 4 5
+"abcd"?l3 / 0 1 2 3 4 4 0 1 2 3 4 4
+"abc"?l3 / 0 1 2 3 3 3 0 1 2 3 3 3
+"ab"?l3 / 0 1 2 2 2 2 0 1 2 2 2 2
+
+/group on lists:
+l2:(count l)#.Q.a
+l2 /"abcdef"
+l group l2
+/    a| ,"a"
+/    b| ,"b"
+/    c| ,"c"
+/    d| ,"d"
+/    e| ,"e"
+/    f| ,"f"
+l2,:raze 3#enlist l2 /l2 ==> "abcdefabcdefabcdefabcdef"
+l group l2
+/    a| "a   "
+/    b| "b   "
+/    c| "c   "
+/    d| "d   "
+/    e| "e   "
+/    f| "f   "
+group l
+/    "a"	enlist 0
+/    "b"	enlist 1
+/    "c"	enlist 2
+/    "d"	enlist 3
+/    "e"	enlist 4
+/    "f"	enlist 5
+group l2
+/    a| 0 6  12 18
+/    b| 1 7  13 19
+/    c| 2 8  14 20
+/    d| 3 9  15 21
+/    e| 4 10 16 22
+/    f| 5 11 17 23
+l3:(count l)#(floor 0.5*count l)#.Q.a /l3 ==> "abcabc"
+group l3
+/    a| 0 3
+/    b| 1 4
+/    c| 2 5
+l group l3 /   *****     important ==> "abcdef" group "abcabc" ==> the resulting dict of (group l3) is used to index l
+/    a| "ad"
+/    b| "be"
+/    c| "cf"
+l3 group l3
+/    a| "aa"
+/    b| "bb"
+/    c| "cc"
 
 / Dictionaries in q are a    *****   generalization of lists
 / they map a list to another list (of equal length)
@@ -391,9 +461,10 @@ meta t
 / => c2| j
 / => c3| j
 / now we see why type is enforced in lists (to protect column types)
-t[1;`c1]:3
+t[1;`c1]:3 /tables are indexed row;col
+t[1;`emptycol] /0N; missing value = 0N = null
 t[`c1;1] /nope
-dicnew[`c1;1]
+dicnew[`c1;1] /dictoinaries are indexed col;row
 dicnew[1;`c1] /nope
 dicnew[`emptykey;1] /0N
 dicnew[`emptykey] /`long$()
@@ -408,10 +479,18 @@ k!t
 / => 1 | 1  4  7
 / => 2 | 3  5  8
 / => 3 | 3  6  9
+k2:([]id:1 2 3;created:2025 2024 2023h)
+k2!t
+/    id created| c1 c2 c3
+/    ----------| --------
+/    1  2025   | 1  4  7
+/    2  2024   | 3  5  8
+/    3  2023   | 3  6  9
 t[0]
 
 / We can also use this    *****   shortcut for defining keyed tables
 kt:([id:1 2 3]c1:1 2 3;c2:4 5 6;c3:7 8 9)
+kt2:([id:1 2 3;created:2025 2024 2023h]c1:1 2 3;c2:4 5 6;c3:7 8 9)
 
 /    *****   THIRD way to make a keyed table out of a regular one
 kt:`c1 xkey ([]c1:1 2 3;c2:4 5 6;c3:7 8 9)
@@ -425,7 +504,7 @@ t[0] / basically same result with default indexing
 /`c1	1
 /`c2	4
 /`c3	7
-kt[`id!1] /   *****   better way since we know which id col and its value
+kt[`id!1] /   *****   better way since we know which keyed col (id) and its value
 / => c1| 1
 / => c2| 4
 / => c3| 7
@@ -452,7 +531,7 @@ f[2] / => 4
 {:x+x}[2] / => 4
 / semi-colon (;) separates expressions
 {r:x+x;:r}[2] / => 4
-{r:x+x;r}[2] / => 4 /   *****   colon is optional
+{r:x+x;r}[2] / => 4 /   *****   colon in last expr is optional for returning
 {r:x+x;r;}[2] / => not return
 {r:x+x;:r;}[2] / =>    *****   return with colon+semicolon
 
@@ -494,10 +573,10 @@ a / => 1
 
 / A function can have one or more of its arguments fixed (projection)
 /   *****   fixing some arguments of a function
-f:+[4]
-f[4] / => 8
-f[5] / => 9
-f[6] / => 10
+addto4:+[4]
+addto4[4] / => 8
+addto4[5] / => 9
+addto4[6] / => 10
 fnew:{x+y-z}
 fnew:fnew[;100;] /fixing middle argument
 fnew[1;2]
@@ -575,6 +654,7 @@ select from t where age>33,height>175
 
 / The where statements are    *****   executed sequentially (not the same as logical AND) -- i remember i struggled with this once
 /    *****   for efficient where query, first statement should be most reducing for optimal data retrieval
+/Query optimization: Always filter by partition column first in where clause for best performance
 select from t where age<40,height=min height
 / => name   age height sex
 / => ---------------------
@@ -621,6 +701,7 @@ t
 / => Polly  52  160    f
 
 /    *****   Insert however is in place, it takes a table name, and new data
+/   *****   returns row numbers of appended records
 `t insert (`John;25;178;`m) / => ,3
 t insert (`John;25;178;`m) /error
 t upsert (`John;25;178;`m) /this works
@@ -654,7 +735,7 @@ t upsert `name`age`height`sex!(`Chester;58;179;`m)
 / => Polly   52  160    f
 / => John    25  178    m
 / => Chester 58  179    m
-t upsert ([] name:`Chester`Maximillian;age:58 25;height:179 183;sex:`m`f)
+`t upsert ([] name:`Chester`Maximillian;age:58 25;height:179 183;sex:`m`f)
 /    name        age height sex
 /    --------------------------
 /    Arthur      35  180    m
@@ -663,6 +744,29 @@ t upsert ([] name:`Chester`Maximillian;age:58 25;height:179 183;sex:`m`f)
 /    Chester     58  179    m
 /    Chester     58  179    m
 /    Maximillian 25  183    f
+
+/ lets look at fby
+/   *****   fby = "filter by" - applies an aggregate function grouped by a column, returning a result for each row (not collapsed like select ... by).
+/Syntax: (aggFunc;col) fby groupCol
+/Returns vector same length as table (not aggregated)
+/Use in where clause (filtering) vs update/select (adding columns)
+/Works with any aggregate: sum, avg, max, min, count, first, last, {user function x} etc
+/Advanced patterns to consider: multiple group columns (f;c) fby (g1;g2), chaining fby, and performance considerations
+select name, age, height, mxht:max height by sex from t /other columns arent helping us i.e. you lose the information of row-wise arrangement of other columns
+select from t where height=(max;height) fby sex /but now you have only one max height per sex
+/lets say we want all colleagues whose height is within 2 of max height in each sex
+select from t where height>=-2+(max;height) fby sex
+/lets say we want only those sex where height>180
+select from t where 180<(max;height) fby sex
+select from t where height=(max;height) fby sex,age<30 /dont confuse:age is a SEPARATE where query
+select from t where height=(max;height) fby ([] sex;age)
+select from t where height=(max;height) fby ([] sex;age div 10) /can include complexity in fby sub parts as well ==> here we made differing age only count if they are in buckets of 10
+t
+/give me all colleagues whose shoesize has maximum 2 ages. So only return those shoesizes  where the number of ages are 2 (like if shoesize 7 has ages 22, 21, 28 -- dont return it, only return if shoesize 8 has 23 and 28 etc)
+/lets convert this to 2 members per gender rather than per shoesize given our current table
+/so here we are grouping by sex (we dont care which colleagues have them so that column doesnt go in ) and we want to aggregate by (number of distinct ages)<=2
+select from t where 2>=(count;age) fby sex
+select from t where 2 >= ({count distinct x}; age) fby sex /FINAL ANSWER --    *****   how to apply double aggregator functions is illustrated in this
 
 / And if our table is keyed
 kt:`name xkey t
@@ -685,6 +789,63 @@ kt upsert ([]name:`Thomas`Chester;age:33 58;height:175 179;sex:`f`m)
 / => John   25  178    m
 / => Polly  52  160    f
 / => Thomas 32  175    m
+
+/   *****   functional sql -- provide table and the filtering condition(s) as arguments to the special functional select operator "?"
+/ useful for dynamic queries at runtime; metaprogramming to generate queries programmatically; complex logic to build queries conditionally
+
+?[ table; whereConditions; groupBy; selectedColumns ] / `whereConditions` is constraints supplied in a list format, each like (<; column; value) or (=; column; value) , enabling programmatic/dynamic construction of queries - (empty list () for none)
+/grouping (groupBy) argument is (0b for no grouping) or a dictionary groupColName!sourceCol if you need grouping
+/selectedColumns is the dictionary of output columns mapping column names to either themselves or expressions
+/fby structure: (fby;(enlist;aggFunc;col);groupCol)
+/ for user-defined functions with 2+ inputs, the parse tree structure is simply: (function; arg1; arg2; arg3; ...)
+?[t;enlist (<; `age; 30); 0b; ()]
+?[t;enlist (<; `age; 30); 0b; (`name1`age1!`name`age)]
+q)?[t; enlist((=; `sym; `AAPL), (>; `price; 100)); (enlist `sym)!enlist `sym; ((enlist `minP)!enlist (min; `price))] /e.g. of multiple conditions
+/more examples:
+?[t; (); 0b; ()] /select from t ==> ALL
+?[t; (); 0b; `sym`price!`sym`price] /select sym, price from t ==> SOME COLS
+?[t; (); 0b; `ticker`px!`sym`price] /select ticker:sym, px:price from t ==> RENAME SOME COLS
+?[t; enlist (>;`price;200); 0b; ()] /select from t where price > 200 ==> SINGLE WHERE
+/   *****   Key insight: Where clause is a list of parse trees. Each condition is (function;arg1;arg2). Use enlist for single condition (otherwise q thinks it's multiple conditions).
+?[t; ((>;`price;100);(>=;`size;100)); 0b; ()] /select from t where price > 100, size >= 100 ==> MULTIPLE WHERE
+?[t; (); 0b; (enlist `size)!(enlist (sum;`size))] /select sum size from t ==> AGGREGATIONS
+?[t; (); (enlist `sym)!(enlist `sym); (enlist `size)!(enlist (sum;`size))]  /select sum size by sym from t ==> GROUP BY
+?[t; (); 0b; `sym`notional!(`sym;(*;`price;`size))] /select sym, notional:price*size from t ==> COMPUTED COLUMN
+?[t; enlist (>;`price;(fby;(enlist;avg;`price);`sym)); 0b; ()] /select from t where price > (avg;price) fby sym ==> COMPLEX WHERE WITH FBY
+?[t; (); 0b; (enlist`result)!enlist({[a;b;c;d] (a*b)+(c%d)};`price;`size;`bid;`ask)] /select result:{[a;b;c;d] (a*b) + (c%d)}[price;size;bid;ask] from t ==> user defined in-line lambda function with 2+ inputs
+/   *****   for debugging, use parse to get the functional form of any q-sql query
+parse "select sym,price from t where size>100"
+/ dynamic column selection
+getCols:{[t;c] ?[t;();0b;c!c]}
+getCols[t;`sym`price]
+/ nested parse tree examples - Every function application becomes (func;arg1;arg2;...), and these nest arbitrarily deep (can use parse to help)
+/ conditional expression i.e. (?;condition;trueExpr;falseExpr) where each branch has its own nested operations.
+?[t; (); 0b; `sym`adjPrice!(`sym;(?;(>;`price;100);(*;`price;1.1);(*;`price;0.9)))] /select sym, adjPrice:?[price>100;price*1.1;price*0.9] from t
+/ Nested function calls -- Three levels: sqrt → sum → *
+?[t; (); 0b; `sym`metric!(`sym;(sqrt;(sum;(*;`price;`price))))] /select sym, metric:sqrt sum price*price from t
+/ String operations
+?[t; (); 0b; (enlist`sym)!enlist(upper;(first;(string;`sym)))] /select upper first string sym from t
+/ Complex fby in where
+?[t; enlist (>;`price;(*;1.5;(fby;(enlist;avg;`price);`sym))); 0b; ()] /select from t where price > 1.5 * (avg;price) fby sym
+/ Multiple nested enlists (typical in complex aggregations). Here we see enlist appearing multiple times:
+/ (enlist `sym) for the group-by key |  enlist `sym for the group-by value
+/ (enlist `sumSq) for the select key | enlist(sum;...) for the select value
+?[t; (); (enlist`sym)!enlist`sym; (enlist`sumSq)!enlist(sum;(*;`price;`price))] /select sumSq:sum price*price by sym from t
+/ Where clause with nested logic
+?[t; enlist (&;(>;`price;100);(within;`size;50 200)); 0b; ()] /select from t where (price>100) & size within 50 200
+/ user defined functions with multiple inputs; position depends on context:
+?[t; enlist (myFunc;`price;`size;`bid;`ask); 0b; ()] /In where clause
+?[t; (); 0b; (enlist`result)!enlist(sqrt;(myFunc;`price;`size;`bid;`ask))] / In select with nesting
+?[t; (); (enlist`sym)!enlist`sym; (enlist`result)!enlist(myFunc;`price;`size;`bid;`ask)] /In group-by aggregation
+/   *****   watch out for: if your function returns a vector and you're using it row-wise, you might need each or ':
+(myFunc';`price;`size;`bid;`ask)   / apply each row
+(';myFunc;`price;`size;`bid;`ask) /in parse tree form
+
+
+/say we have the query:
+update avbsz:avg bsize from select from fbyt where bsize>(avg;bsize) fby sym
+?[fbyt; enlist (>;`bsize;(fby;(enlist;avg;`bsize);`sym)); 0b; (cols[fbyt]!cols[fbyt]),(enlist `avbsz)!enlist(avg; `bsize)] /its functional form -- takes lesser time!
+
 
 / Most of the standard SQL joins are present in q-sql, plus a few new friends
 / see http://code.kx.com/q4m3/9_Queries_q-sql/#99-joins
@@ -721,6 +882,9 @@ aj[`time;trades;quotes]
 /    10:01:03 ibm  200 98
 /    10:01:04 ibm  150 98
 
+aj[`sym`time;.sam.trade;.sam.quote]~aj[`sym`time;.sam.trade;`time xasc .sam.quote] /1b ==> i.e. doesnt matter if you do asof join with sorted lists or not....
+
+
 ////////////////////////////////////
 /////     Extra/Advanced      //////
 ////////////////////////////////////
@@ -730,15 +894,15 @@ aj[`time;trades;quotes]
 / This is not a mistake!
 / q is a vector language so   *****   explicit loops (for, while etc.) are not encouraged
 / where possible functionality should be vectorized (i.e. operations on lists)
-/ adverbs supplement this vector operatoins on lists
+/ adverbs supplement this vector operations on lists
 / they modify the behaviour of functions and provide loop type functionality when required
 / (in q functions are sometimes referred to as verbs, hence adverbs)
 / the    *****   "each" adverb modifies a function to treat a list as individual variables
 first each (1 2 3;4 5 6;7 8 9)
 / => 1 4 7
 
-/ each-left (\:) and each-right (/:) modify a two-argument function
-/ to treat one of the arguments as individual variables instead of a list
+/ each-left (\:) and each-right (/:)    *****   modify a two-argument function
+/ to treat one of the arguments as individual variables (atoms) instead of a list
 1 2 3 +\: 11 22 33
 / => 12 23 34
 / => 13 24 35
@@ -766,6 +930,8 @@ WindshieldWiperMnemonic: "\/The windshield wiper on a car swings anticlock then 
 5 {x * 2}\ 1
 5 {x * 2}/ 1
 10 {x,sum -2#x}/ 1 1 2  /fibonacci
+{x,sum -2#x}/[10;1 1]  /fibonacci -- another way of writing
+{x,sum -2#x}\[10;1 1]  /fibonacci -- scan instead of over
 
 
 
@@ -780,7 +946,7 @@ WindshieldWiperMnemonic: "\/The windshield wiper on a car swings anticlock then 
 
 / MONADIC-3: a single argument function modified by scan given ONE arg    *****   behaves like "do until result doesnt change any longer"
 / q4m3 defines: "Wouldn't it be nice of q had a higher-order function to apply a function recursively, starting at the base case, until the output
-/Just specify the base case without second argument and q iterates until the result converges within the system comparison tolerance (as of this writing – Sep 2015 – that tolerance is 10-14)"
+/Just specify the base case without second argument and q iterates until the result converges within the system comparison tolerance (as of this writing – Sep 2015 – that tolerance is 10^-14)"
 {[xn] xn-((xn*xn)-2)%2*xn}/ [1] /approximate functoinally, the square of 2, using input as first approximation
 {[xn] xn-((xn*xn)-2)%2*xn}/ [(1;5;2)] /3 approximations, one for each input
 {[xn] xn-((xn*xn)-2)%2*xn}/ [1;5] /1 approximations, using 5 for input
@@ -804,10 +970,57 @@ WindshieldWiperMnemonic: "\/The windshield wiper on a car swings anticlock then 
 /   *****   can also be written as:
 +\ [til 15]
 +\ til 15 /doesnt work
+(+\) til 15 /DOES work
 {x-y}/ [1+til 100]
+
+/ some more higher order functions
+/each ' -- {x'y} ==> each-both
+/prior \: -- {x':y} ==> each-left
+/peach /: -- {x':y} ==> each-right
+3 5 #\: "+" /each left
+    "+++"
+    "+++++"
+2 3 5 #\: "+-" /each left also
+    "+-"
+    "+-+"
+    "+-+-+"
+5 #/: "+-" /each right
+    "+++++"
+    "-----"
+3 5 #/: "+-" /each right also
+    ("+++++";"+++++";"+++++")
+    ("-----";"-----";"-----")
+3 5 #' "+-" /each both (NOTE cant have length mismatch)
+    "+++"
+    "-----"
+/ BUT each both acts like each left OR each rright if one of the sides is atomic
+3 5 #' "+" /each both as each left
+    "+++"
+    "+++++"
+5 #' "+-" /each both as each right
+    "+++++"
+    "-----"
 
 / There are other iterators and uses, this is only intended as quick overview
 / http://code.kx.com/q4m3/6_Functions/#67-iterators
+
+// ENUMERATING LISTS
+vlist:`apple`orange`apple`mango`apple`orange`orange`mango
+ulist:distinct vlist
+klist:ulist?vlist /find left operator in the right operator
+ulist[klist]~vlist /1b
+/if now you were to change an element in ulist, the entire resultant ulist[klist] will get changed without having to do them for all ements in klist
+`ulist$vlist /   *****   this enumerates the vlist as per ulist ==> `ulist$`apple`orange`apple`mango`apple`orange`orange`mango
+type elist:`ulist$vlist /20h ==> shows that it is an enumeration
+-3!elist / "`ulist$`apple`orange`apple`mango`apple`orange`orange`mango"
+elist,:`diamonds /'cast error -- we cannot add an illegal type
+elist[0]:`diamonds /'cast error -- we cannot overwrite with an illegal type
+elist,:`mango /success
+elist[0]:`orange /success
+ulist,:`diamonds
+elist,:`diamonds /   *****   NOW THIS WORKS
+-3!last elist /"`ulist$`diamonds"
+/Foreign keys:   *****   The ability to restrict the values of a list or column to a domain can be easily extended to restrict one column to link to another table and this is how kdb implements foreign keys
 
 ////// Scripts //////
 / q scripts can be loaded from a q session using the "\l" command
@@ -823,6 +1036,12 @@ system "ls"
 /    "life.txt"
 /    "mocktrades"
 /    "mocktrades.csv"
+//   *****   alternative to system command is directly using \
+\ls
+/    "2025.10.29"
+/    "2025.10.30"
+/    "2025.10.31"
+/    "sym"
 system "pwd"
 /    "/Users/SamarthSoni/Projects/KDB/qkiln/hdb"
 `:serialized set t / saves the table as a single serialized file
@@ -887,9 +1106,264 @@ select from mocktrades
 /    2025.10.01 0D00:01:08.073479086 aapl 3490 261.70000000000005
 /    ..
 
+// LISTING ALL JOINS
+/1. Left Join (lj)
+t1 lj t2   / match t1 rows to keyed t2
+/2. Inner Join (ij)
+t1 ij t2   / only rows that match in both
+/3. Plus Join (pj)
+t1 pj t2   / like lj but adds numeric values instead of replacing
+/4. Union Join (uj)
+t1 uj t2   / all rows from both, fills nulls for missing columns
+/5. Equi-join (ej)
+ej[`sym;t1;t2]   / join on specified column(s), doesn't require keyed table
+/6. As-of Join (aj) - critical for time series
+aj[`sym`time;trades;quotes]   / match most recent quote for each trade
+/7. Window Join (wj)
+wj[windows;`sym`time;trades;(quotes;(avg;`bid))]   / aggregate within time windows
+/8. Cross Join (,\\: or cross)
+t1 cross t2   / cartesian product
+
+/ JOINING LISTS
+L1
+L2
+L1,'L2 /horizontal join
+L1,L2 /vertical join
+`$string[L1],'"-",'string[L2] /join cols as strings
+
+
+
+// WINDOW JOIN AND LOADING AN HDB
+
+\ls
+dir:{x .Q.dd'key x}
+dir `:architecture/sym
+/wrong ways to load:
+\l `:architecture/sym
+get `:architecture/sym
+\l "`:architecture/sym"
+/correct way to load:
+\l architecture/sym
+/When successful:
+/	•	It sets the global variable .Q.par to that path (`:architecture/sym).
+/	•	It reads the database definition (the metadata from the sym folder) into memory.
+/	•	It does not immediately load all tables from all partitions — because kdb+ is designed for lazy, on-demand loading.
+/ then we go back up the two levels to original root
+\cd ../..
+\pwd
+
+tables[]
+select from quote
+.q.load[] /to load all tables explicitly
+.q.load trade
+.sam.quote:select from quote
+count .sam.quote
+.sam.trade:select from trade
+count .sam.trade
+/subtract 500ms and add 500ms to each time for WINDOW JOIN
+windowls:-0D00:00:00.500 0D00:00:00.500+\:.sam.trade`time /each corresponding elements give us one second span
+windowls[1]-windowls[0] /list of 0D00:00:01.000000000 x 5918
+count each windowls /5918x5918 -- two legs
+/window join syntax: wj[window;list of cols to do the join oin;trades table;(list of values -- quotes table;aggregations on other columns like MBBO i.e. max bid, min ask to get best match)]
+wj[windowls;`sym`time;`time xasc .sam.trade;(`time xasc .sam.quote;(max;`bid);(min;`ask))]
+wj[windowls;`sym`time;`time xasc .sam.trade;(`time xasc .sam.quote;(::;`bid);(::;`ask))] /to verify, we can replace aggregation with niladic operator '::' -- 147ms
+wj[windowls;`sym`time;`time xasc .sam.trade;(`time xasc .sam.quote;(0N!;`bid);(0N!;`ask))] /can also use identity operator '0N!' but slower -- 1079ms
+
+
+
+/End-of-Day (EOD) Savedown --- At day's end, the RDB writes data to disk using .Q.dpft or .Q.hdpf
+.Q.dpft[`:/path/to/hdb; .z.d; `sym; `tablename]
+
+/d: directory path
+/p: partition value (date)
+/f: field to apply p# attribute (usually sym)
+/t: table name
+/This function:
+/Enumerates symbols against the sym file using .Q.en
+/Writes columns as separate files (splayed)
+/Applies the parted attribute to optimize queries
+/Notifies HDB to reload with \l .
+
+
+
+/Attributes are metadata applied to columns to accelerate queries
+Sorted	s#	Column is sorted -- Maintained if appends maintain order
+Unique	u#	All values distinct -- Maintained if appends are unique)
+Parted	p#	Values grouped in contiguous blocks -- Not maintained: lost on any operation)
+Grouped	g#	Creates hash table index -- maintained on appends
+Best practices:
+
+RDB: Apply g# to sym for fast lookups during day
+
+HDB: Apply p# to sym after sorting at EOD—data is static, so attribute persists
+
+Multiple g# on HDB: Apply to frequently queried columns (not just sym) since disk space is plentiful
+
+
 ////// Frameworks //////
 / kdb+ is typically used for data capture and analysis.
 / This involves using an architecture with multiple processes working together.
 /kdb+ frameworks are available to streamline the setup and configuration of this architecture
 / and add additional functionality such as disaster recovery, logging, access, load balancing etc.
 / https://github.com/DataIntellectTech/TorQ
+
+/// File compression --- https://code.kx.com/q/kb/file-compression/#compression-parameters ///
+ttt:1000#enlist asc 1000?10
+`:a set ttt  / uncompressed file
+(`:../outmisc/za;17;2;9)set ttt          / compressed file
+system "pwd"
+/logical block size, algorithm, and compression level.
+/logical block - power of 2 betw 12 & 20
+/algorithm - 0-5
+/level - depends on algorithm, 0 is available for all
+
+
+/// CSV file reading
+system "pwd"
+system "ls"
+/ to get saved table
+get `:outmisc/za
+t:get `:hdb/mocktrades
+//to save down a txt file
+`:outmisc/life.txt 0: ("Meaning";"of";"life";"is";"to";"chant";"Hare";"Krishna")
+`:outmisc/life.txt
+get `:outmisc/life.txt /doesnt work this way
+read0 `:outmisc/life.txt
+/ to save a table as csv
+csv 0: t /first convert table into comma separated list
+`:outmisc/mocktrades.csv 0: csv 0: t /now save it down to a text file
+get `:outmisc/mocktrades.csv /doesnt work this way
+read0 `:outmisc/mocktrades.csv
+
+meta ("DNSJF"; enlist ",") 0: `:outmisc/mocktrades.csv
+meta t
+
+/// Temporal operations ==> operations on time-series data, dates, timestamps.
+/ q - dates/times are first-class types
+dates: 2024.01.01 + til 10
+prices: 100 + 10 * sin til 10
+trades: ([] time: 09:30:00 09:31:00 09:32:00; price: 100 101 102)
+quotes: ([] time: 09:30:30 09:31:30; bid: 99.5 100.5)
+/ Time-series joins (asof join) -- Get the most recent quote for each trade
+aj[`time; trades; quotes]
+
+/ Window operations
+mavg[5; prices]  / 5-period moving average
+
+/ Time bucketing
+5 xbar til 15 /pull down all intervals of "leftoperandvalue's width" to leftmost value
+select avg price by 2 xbar time.minute from trades
+
+
+/// Why saving a table creates both filename and filename#
+/The # suffix indicates that the data is stored in a two-file format - either because:
+/    1. Compound/nested columns
+/       colname = offsets/indices
+/       colname# = actual nested data
+/    2. Compressed files -- When using compression like (:file;17;2;9)set data`:
+/       file = metadata/header with compression info
+/       file# = the actual compressed data
+/    3. Anymap files (V3.6+) -- For mapped vectors and certain nested structures, kdb+ uses # files as part of the anymap storage format.
+get `:outmisc/za /gets whole file
+-21!`:outmisc/za    / show compression info
+/    compressedLength  | 100
+/    uncompressedLength| 12096
+/    algorithm         | 2i
+/    logicalBlockSize  | 17i
+/    zipLevel          | 9i
+read0 `:outmisc/za#
+/When you persist a tablewith compound/nested columns (lists of lists, strings, etc.) or nested list to disk via set/Q.dpft, q produces two objects:
+/simplecolName        ← (flat file) -- Simple vectors (int, float, symbol, etc.)
+/compoundcolName        ← (indices/offsets) -- Compound lists (nested lists, char vectors/strings)
+/compoundcolName#        ← (actual data as hash-file companion) -- contains the actual text found in the column's nested lists/strings.
+
+testtab:([]a:1 2 3;b:("hello";"world";"test"))
+`:hdb/secondsplay/ set .Q.en[`:hdb/secondsplay]testtab
+\ls -arth hdb/secondsplay
+/ You'll get:
+/ hdb/secondsplay/a      (simple int vector - one file)
+/ hdb/secondsplay/b      (offsets for compound column)
+/ hdb/secondsplay/b#     (actual string data)
+/ hdb/secondsplay/.d     (column order)
+
+get `:hdb/secondsplay /stops working if now you remove b#
+get `:hdb/splayed
+
+
+/directory hierarchy and HDB on disk layout structure
+/ all column flat files can have attributes (p#, g#, s#, u#)
+db/                          ← HDB root directory
+├── sym                      ← Enumeration file (symbol pool)
+├── 2020.10.04/              ← Date partition
+│   ├── trade/               ← Splayed table
+│   │   ├── .d               ← Column order metadata -- Lists column names in order for table reconstruction
+│   │   ├── sym              ← Enumerated symbol column
+│   │   ├── time             ← Time column
+│   │   ├── price            ← Price column
+│   │   └── size             ← Size column
+│   └── quote/
+│       ├── .d
+│       ├── sym
+│       ├── time
+│       ├── bid
+│       └── ask
+├── 2020.10.05/              ← Another date partition
+│   ├── trade/
+│   └── quote/
+└── ...
+
+/kdb automatically detects what is the format of partitioned column based on format of directory names
+/ Creates virtual column: At query time, kdb+ adds this virtual column to each table—it never exists on disk
+.Q.pf /   *****   stores which column is the hdb currently partitioned by -- automatically detected
+.Q.pt / returns list of partitioned tables
+.Q.pv / returns list of partition values: 2020.10.04 2020.10.05 2020.10.06
+.Q.par	/Segmented paths (if par.txt)
+
+/// Symbol File (sym) Management
+get `:architecture/sym/sym /`AMZN`MSFT`TSLA`META`B`S`APPL`GOOGL
+get `:architecture/sym/2025.10.29/quote/.d /column order ==> `sym`time`bid`ask`bsize`asize
+/    Purpose: The sym file is a string pool that enumerates symbol columns to integers, drastically reducing disk space and improving query performance.
+/    Absolutely essential—without it, enumerated data is unreadable
+/    Techniques:
+/        Enumeration during savedown: Use .Q.en[:.;table]` to enumerate symbols before writing
+/        Compacting bloated sym files: Over time, unused symbols accumulate. Compact by re-enumerating against a fresh sym file
+/        Multiple sym files: For very large systems, enumerate different tables to separate sym files (sym1, sym2, etc.) using .Q.ens or .Q.dpfts
+/        Backup sym files: Critical for disaster recovery—losing the sym file makes enumerated data unreadable
+
+/// Other configuration files
+par.txt -- Segmented Databases -- For very large HDBs, split across multiple disks/servers
+/    db/
+/    ├── par.txt          ← Lists segment paths
+/    └── sym
+/    par.txt contents:
+/        /disk0/db
+/        /disk1/db
+/        /disk2/db
+/    Each segment contains its own date partitions:
+/        /disk0/db/2020.10.01/
+/        /disk1/db/2020.10.02/
+/        /disk2/db/2020.10.03/
+/    Benefits:
+/        Parallel I/O across disks
+/        Scales beyond single-disk capacity
+/        Map-reduce queries leverage multithreading
+/    Considerations:
+/        Data must be correctly partitioned (no duplication unless intentional)
+/        Requires careful configuration and testing
+
+/// Intraday writedown:
+When RAM is limited, write data to disk during the day instead of waiting for EOD:
+/    Techniques:
+/        Time-based: Write every N minutes
+/        Row-based: Write when table exceeds threshold (e.g., 1M rows)
+/        Temporary splayed tables: Write to temp location, sort/merge at EOD
+/        Integer-partitioned temp dir: Partition by sym enumeration for faster EOD merge
+/    Trade-offs:
+/        Reduces memory footprint
+/        Adds complexity to queries (must check both memory and disk)
+/        Slower EOD processing (sorting/merging required)
+
+/// Disaster Recovery strategies:
+/    From TP logs: Replay logs into empty HDB (slow but complete)
+/    From HDB backups: Fastest—restore files directly
+/    Continuous replication: Mirror HDB to DR site
